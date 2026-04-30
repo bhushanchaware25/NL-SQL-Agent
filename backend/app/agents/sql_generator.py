@@ -117,9 +117,18 @@ def sql_generator_node(state: AgentState) -> AgentState:
     structured_llm = llm.with_structured_output(SQLOutput)
 
     try:
-        output: SQLOutput = structured_llm.invoke([system_msg, human_msg])
-        sql = output.sql.strip().rstrip(";") + ";"
-        explanation = output.explanation
+        output = structured_llm.invoke([system_msg, human_msg])
+
+        # openrouter/auto sometimes returns a raw dict instead of the Pydantic model
+        if isinstance(output, dict):
+            sql = output.get("sql", "").strip().rstrip(";") + ";"
+            explanation = output.get("explanation", "")
+        else:
+            sql = output.sql.strip().rstrip(";") + ";"
+            explanation = output.explanation
+
+        if not sql or sql == ";":
+            raise ValueError("LLM returned an empty SQL query.")
 
         # Safety check on generated SQL
         is_safe, reason = check_sql_safety(sql)

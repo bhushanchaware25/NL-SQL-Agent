@@ -34,8 +34,11 @@ export default function App() {
         <div className="content-area">
           <DBConnector />
           <QueryInput />
-          <AgentTrace />
-          <ResultsPanel />
+          
+          <div className="results-and-trace">
+            <ResultsPanel />
+            <AgentTrace />
+          </div>
         </div>
       </div>
     </div>

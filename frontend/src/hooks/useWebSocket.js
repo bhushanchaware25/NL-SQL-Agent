@@ -64,6 +64,7 @@ export function useWebSocket() {
         }
       } catch (e) {
         console.error('WS parse error:', e)
+        finishQuery()
       }
     }
 
@@ -77,8 +78,10 @@ export function useWebSocket() {
       finishQuery()
     }
 
+    // onclose: only finish if not already done (fallback for unexpected disconnects)
     ws.onclose = () => {
-      finishQuery()
+      // Use a small delay to let the last onmessage fire first
+      setTimeout(() => finishQuery(), 100)
     }
   }, [dbUrl, resetQuery, finishQuery, addAgentStep, setResult, addToHistory])
 

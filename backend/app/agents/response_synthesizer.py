@@ -126,15 +126,23 @@ def response_synthesizer_node(state: AgentState) -> AgentState:
     structured_llm = llm.with_structured_output(SynthesizerOutput)
 
     try:
-        output: SynthesizerOutput = structured_llm.invoke([system_msg, human_msg])
+        output = structured_llm.invoke([system_msg, human_msg])
 
-        chart_type = output.chart_type
+        # openrouter/auto sometimes returns a raw dict instead of the Pydantic model
+        if isinstance(output, dict):
+            answer = output.get("answer", "")
+            chart_type = output.get("chart_type")
+            x_key = output.get("x_key")
+            y_key = output.get("y_key")
+        else:
+            answer = output.answer
+            chart_type = output.chart_type
+            x_key = output.x_key
+            y_key = output.y_key
+
         chart_data = None
-
-        if chart_type and output.x_key and output.y_key:
-            chart_data = _format_chart_data(
-                rows, output.x_key, output.y_key, chart_type
-            )
+        if chart_type and x_key and y_key:
+            chart_data = _format_chart_data(rows, x_key, y_key, chart_type)
             if not chart_data:
                 chart_type = None  # fallback: no data to chart
 
@@ -145,7 +153,7 @@ def response_synthesizer_node(state: AgentState) -> AgentState:
                 "status": "done",
                 "message": "Answer ready.",
                 "data": {
-                    "answer_preview": output.answer[:100],
+                    "answer_preview": answer[:100],
                     "chart_type": chart_type,
                 },
             }
@@ -153,7 +161,7 @@ def response_synthesizer_node(state: AgentState) -> AgentState:
 
         return {
             **state,
-            "answer": output.answer,
+            "answer": answer,
             "chart_type": chart_type,
             "chart_data": chart_data,
             "stream_events": events,

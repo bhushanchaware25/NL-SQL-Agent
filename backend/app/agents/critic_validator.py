@@ -147,10 +147,17 @@ def critic_validator_node(state: AgentState) -> AgentState:
     structured_llm = llm.with_structured_output(CriticOutput)
 
     try:
-        output: CriticOutput = structured_llm.invoke([system_msg, human_msg])
-        is_valid = output.is_valid
-        critique = output.critique
-        suggested_fix = output.suggested_fix or ""
+        output = structured_llm.invoke([system_msg, human_msg])
+
+        # openrouter/auto sometimes returns a raw dict instead of the Pydantic model
+        if isinstance(output, dict):
+            is_valid = bool(output.get("is_valid", True))
+            critique = output.get("critique", "")
+            suggested_fix = output.get("suggested_fix", "") or ""
+        else:
+            is_valid = output.is_valid
+            critique = output.critique
+            suggested_fix = output.suggested_fix or ""
 
         # On success, add good example to few-shot store
         if is_valid:
